@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Fresh Forward — Bezoekersregistratie</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background:
+      linear-gradient(180deg, #FDF4F2 0%, #FBF7F0 28%, #F5F9EE 100%);
+    color: #1f2937; user-select: none; -webkit-user-select: none;
+  }
+  .app { position: relative; z-index: 1; }
+  /* Decorative photo blobs (Unsplash placeholders — replace with own brand photos later) */
+  .decor {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+  }
+  .decor-photo {
+    position: absolute;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 20px 50px -10px rgba(124,194,66,0.25), 0 8px 24px rgba(0,0,0,0.08);
+    filter: saturate(0.95);
+    opacity: 0.85;
+  }
+  /* Top-right: white strawberry blossom close-up */
+  .decor-photo.tr {
+    top: -90px; right: -70px;
+    width: 280px; height: 280px;
+    background-image: url("https://images.unsplash.com/photo-1756132842181-dad475729b5f?w=600&q=85&auto=format&fit=crop&crop=center");
+  }
+  /* Bottom-left: strawberry flowers in green leaves */
+  .decor-photo.bl {
+    bottom: -110px; left: -80px;
+    width: 320px; height: 320px;
+    background-image: url("https://images.unsplash.com/photo-1746349638922-6e08f5c729a4?w=700&q=85&auto=format&fit=crop&crop=center");
+  }
+  /* Mid-right: ripe strawberry */
+  .decor-photo.mr {
+    top: 38%; right: -90px;
+    width: 200px; height: 200px;
+    background-image: url("https://images.unsplash.com/photo-1677694682771-f2a1eaa7b8d9?w=400&q=85&auto=format&fit=crop&crop=center");
+    opacity: 0.75;
+  }
+  .app { height: 100vh; display: flex; flex-direction: column; }
+  .screen { flex: 1; display: none; flex-direction: column; padding: 40px; overflow-y: auto; }
+  .screen.active { display: flex; }
+  .card {
+    background: white; border-radius: 24px; padding: 48px;
+    box-shadow: 0 20px 50px rgba(124, 194, 66, 0.15), 0 4px 16px rgba(0,0,0,0.06);
+    max-width: 800px; width: 100%; margin: auto;
+    border-top: 6px solid #7CC242;
+  }
+  h1 { font-size: 42px; margin: 0 0 16px; color: #1a1a1a; font-weight: 800; letter-spacing: -0.5px; }
+  h2 { font-size: 28px; margin: 0 0 24px; color: #1a1a1a; font-weight: 700; }
+  p { font-size: 18px; line-height: 1.6; color: #4b5563; }
+  .subtitle { font-size: 20px; color: #6b7280; margin: 0 0 32px; }
+  label { display: block; font-weight: 600; font-size: 16px; margin: 16px 0 8px; color: #374151; }
+  input[type="text"], input[type="tel"], input[type="email"], textarea, select {
+    width: 100%; padding: 16px 20px; font-size: 20px;
+    border: 2px solid #e5e7eb; border-radius: 12px;
+    background: #f9fafb; font-family: inherit;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none; border-color: #7CC242; background: white;
+    box-shadow: 0 0 0 4px rgba(124, 194, 66, 0.15);
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .actions { margin-top: 32px; display: flex; gap: 16px; justify-content: space-between; }
+  button {
+    padding: 18px 36px; font-size: 20px; font-weight: 600;
+    border: none; border-radius: 12px; cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.2s;
+    font-family: inherit;
+  }
+  button:active { transform: scale(0.97); }
+  .btn-primary { background: #7CC242; color: white; box-shadow: 0 4px 12px rgba(124, 194, 66, 0.3); }
+  .btn-primary:hover { background: #6BAE36; }
+  .btn-secondary { background: #e5e7eb; color: #374151; }
+  .btn-large { padding: 24px 64px; font-size: 24px; border-radius: 16px; }
+  .btn-full { width: 100%; }
+  .welcome-card { text-align: center; border-top: none; padding-top: 32px; }
+  .welcome-card h1 { font-size: 42px; margin-bottom: 12px; color: #1a1a1a; }
+  .logo { max-width: 380px; width: 100%; height: auto; margin: 0 auto 32px; display: block; }
+  .policy-box {
+    background: #f9fafb; border: 2px solid #e5e7eb;
+    border-radius: 12px; padding: 24px; margin: 16px 0;
+    max-height: 320px; overflow-y: auto;
+    font-size: 16px; line-height: 1.7;
+  }
+  .checkbox-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 16px; background: #f1f8e9; border-radius: 12px;
+    margin-top: 16px; cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .checkbox-row:has(input:checked) { border-color: #7CC242; background: #e8f5d9; }
+  .checkbox-row input[type="checkbox"] {
+    width: 28px; height: 28px; flex-shrink: 0; margin-top: 2px;
+    accent-color: #7CC242;
+  }
+  .checkbox-row span { font-size: 17px; font-weight: 500; }
+  .signature-box {
+    border: 2px dashed #7CC242; border-radius: 12px;
+    background: #f9fdf3; touch-action: none;
+    height: 240px; margin: 16px 0;
+  }
+  canvas { width: 100%; height: 100%; display: block; border-radius: 10px; }
+  .signature-actions { display: flex; gap: 12px; }
+  .signature-actions button { flex: 1; padding: 12px; font-size: 16px; }
+  .success-card { text-align: center; }
+  .success-card .icon {
+    font-size: 64px; margin: 0 auto 24px;
+    width: 120px; height: 120px; border-radius: 50%;
+    background: #7CC242; color: white;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(124, 194, 66, 0.4);
+  }
+  .success-card h1 { color: #7CC242; }
+  .stepper {
+    display: flex; gap: 8px; justify-content: center; margin-bottom: 24px;
+  }
+  .step-dot {
+    width: 12px; height: 12px; border-radius: 50%; background: #d1d5db;
+    transition: all 0.3s;
+  }
+  .step-dot.active { background: #E0245F; width: 32px; border-radius: 6px; }
+  .step-dot.done { background: #7CC242; }
+  .settings-icon {
+    position: fixed; top: 12px; right: 12px;
+    width: 60px; height: 60px; opacity: 0;
+    cursor: pointer; z-index: 100;
+  }
+  .settings-modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center; z-index: 200;
+    padding: 20px;
+  }
+  .settings-modal.active { display: flex; }
+  .settings-content {
+    background: white; border-radius: 16px; padding: 32px;
+    max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;
+  }
+  .status-pill {
+    position: fixed; bottom: 16px; left: 16px;
+    background: rgba(0,0,0,0.6); color: white;
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 12px; z-index: 50;
+  }
+  .status-pill.error { background: #dc2626; }
+  .status-pill.warning { background: #f59e0b; }
+  .pending-badge {
+    position: fixed; bottom: 16px; right: 16px;
+    background: #f59e0b; color: white;
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 12px; z-index: 50; display: none;
+  }
+  .pending-badge.show { display: block; }
+  /* Premium iOS-style segmented language picker */
+  .lang-picker {
+    position: fixed; top: 20px; left: 20px;
+    display: flex; gap: 2px; z-index: 50;
+    background: rgba(255,255,255,0.85);
+    border: 1px solid rgba(0,0,0,0.05);
+    padding: 4px;
+    border-radius: 14px;
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    box-shadow:
+      0 10px 30px -10px rgba(0,0,0,0.15),
+      0 4px 10px -4px rgba(0,0,0,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  .lang-btn {
+    position: relative;
+    min-width: 54px; height: 40px;
+    border-radius: 10px;
+    border: none; cursor: pointer;
+    padding: 0 14px;
+    background: transparent;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.6px;
+    color: #6b7280;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: inherit;
+  }
+  .lang-btn:hover { color: #1a1a1a; background: rgba(0,0,0,0.04); }
+  .lang-btn.active {
+    color: #1a1a1a;
+    background: white;
+    box-shadow:
+      0 2px 8px rgba(0,0,0,0.08),
+      0 1px 3px rgba(0,0,0,0.06);
+  }
+  /* Flag-color accent bar under active language */
+  .lang-btn.active::after {
+    content: "";
+    position: absolute;
+    bottom: 5px; left: 50%; transform: translateX(-50%);
+    width: 22px; height: 3px; border-radius: 2px;
+  }
+  .lang-btn[data-lang="nl"].active::after {
+    background: linear-gradient(to right, #AE1C28 0%, #AE1C28 33.33%, #FFFFFF 33.33%, #FFFFFF 66.66%, #21468B 66.66%, #21468B 100%);
+    box-shadow: 0 0 0 0.5px rgba(0,0,0,0.15);
+  }
+  .lang-btn[data-lang="en"].active::after {
+    background: linear-gradient(to right, #012169 0%, #012169 25%, #C8102E 37.5%, #C8102E 62.5%, #012169 75%, #012169 100%);
+  }
+  .lang-btn[data-lang="de"].active::after {
+    background: linear-gradient(to right, #000000 0%, #000000 33.33%, #DD0000 33.33%, #DD0000 66.66%, #FFCE00 66.66%, #FFCE00 100%);
+    box-shadow: 0 0 0 0.5px rgba(0,0,0,0.1);
+  }
+  .lang-btn[data-lang="es"].active::after {
+    background: linear-gradient(to right, #AA151B 0%, #AA151B 25%, #F1BF00 25%, #F1BF00 75%, #AA151B 75%, #AA151B 100%);
+  }
+  .lang-btn .code {
+    display: none; font-size: 10px; font-weight: 700;
+    color: #1a1a1a; margin-top: 2px;
+  }
+  .lang-btn.active .code { display: block; position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); color: white; }
+  .error-msg { color: #dc2626; font-size: 15px; margin-top: 8px; }
+  .field-hint { font-size: 14px; color: #6b7280; margin-top: 4px; }
+  .policy-tabs { display: flex; gap: 4px; margin: 12px 0 0; border-bottom: 2px solid #e5e7eb; }
+  .policy-tab { padding: 8px 14px; background: transparent; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-size: 14px; color: #6b7280; font-weight: 500; border-radius: 0; }
+  .policy-tab.active { color: #7CC242; border-bottom-color: #7CC242; }
+  @media (max-width: 768px) {
+    /* Mobile/phone — let the page scroll naturally so visitors can swipe through the form */
+    html, body { overflow: auto; height: auto; min-height: 100%; user-select: text; -webkit-user-select: text; }
+    .app { height: auto; min-height: 100vh; }
+    /* Extra padding-top so the fixed language picker doesn't overlap the card */
+    .screen { padding: 72px 12px 16px; overflow-y: visible; }
+    .screen.active { display: flex; }
+    .card { padding: 24px 20px; margin: 0 auto 12px; }
+    h1 { font-size: 28px; }
+    .welcome-card h1 { font-size: 34px; }
+    .logo { max-width: 280px; margin-bottom: 16px; }
+    .row { grid-template-columns: 1fr; }
+    input[type="text"], input[type="tel"], input[type="email"], textarea, select { font-size: 16px; padding: 14px 16px; }
+    label { font-size: 15px; }
+    .policy-box { max-height: none; padding: 16px; font-size: 15px; }
+    .signature-box { height: 200px; }
+    .btn-large { padding: 18px 32px; font-size: 18px; }
+    button { padding: 14px 24px; font-size: 16px; }
+    .settings-icon { top: 8px; }
+    .lang-picker { top: 12px; left: 12px; padding: 3px; gap: 1px; }
+    .lang-btn { min-width: 46px; height: 36px; font-size: 12px; padding: 0 10px; }
+    .lang-btn.active::after { bottom: 3px; width: 18px; height: 2px; }
+    /* Smaller decoration photos on phone */
+    .decor-photo.tr { width: 180px; height: 180px; top: -50px; right: -50px; opacity: 0.7; }
+    .decor-photo.bl { width: 200px; height: 200px; bottom: -60px; left: -60px; opacity: 0.7; }
+    .decor-photo.mr { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Decorative photo blobs (placeholders) -->
+<div class="decor" aria-hidden="true">
+  <div class="decor-photo tr"></div>
+  <div class="decor-photo bl"></div>
+  <div class="decor-photo mr"></div>
+</div>
+
+<div class="settings-icon" id="settingsIcon"></div>
+<div class="lang-picker" id="langPicker">
+  <button class="lang-btn" data-lang="nl" onclick="setLang('nl')" title="Nederlands" aria-label="Nederlands">NL</button>
+  <button class="lang-btn" data-lang="en" onclick="setLang('en')" title="English" aria-label="English">EN</button>
+  <button class="lang-btn" data-lang="de" onclick="setLang('de')" title="Deutsch" aria-label="Deutsch">DE</button>
+  <button class="lang-btn" data-lang="es" onclick="setLang('es')" title="Español" aria-label="Español">ES</button>
+</div>
+<div class="status-pill" id="statusPill">Klaar</div>
+<div class="pending-badge" id="pendingBadge">0 in wachtrij</div>
+
+<div class="app">
+
+  <!-- Screen 1: Welcome -->
+  <div class="screen active" id="screen-welcome">
+    <div class="card welcome-card">
+      <svg class="logo" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg" aria-label="Fresh Forward — Breeding &amp; Concepts">
+        <!-- Red squiggle (top) -->
+        <path d="M 40 30 Q 140 5, 250 35 Q 380 65, 500 25" stroke="#E0245F" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <!-- Strawberry seeds scattered -->
+        <ellipse cx="80" cy="80" rx="7" ry="3.5" fill="#7CC242" transform="rotate(-25 80 80)"/>
+        <ellipse cx="540" cy="70" rx="7" ry="3.5" fill="#7CC242" transform="rotate(40 540 70)"/>
+        <ellipse cx="160" cy="260" rx="7" ry="3.5" fill="#7CC242" transform="rotate(55 160 260)"/>
+        <ellipse cx="440" cy="265" rx="7" ry="3.5" fill="#7CC242" transform="rotate(-35 440 265)"/>
+        <ellipse cx="300" cy="20" rx="7" ry="3.5" fill="#7CC242" transform="rotate(15 300 20)"/>
+        <ellipse cx="260" cy="240" rx="7" ry="3.5" fill="#7CC242" transform="rotate(-20 260 240)"/>
+        <ellipse cx="380" cy="220" rx="7" ry="3.5" fill="#7CC242" transform="rotate(30 380 220)"/>
+        <!-- FRESH -->
+        <text x="30" y="145" font-family="'Arial Black', Impact, sans-serif" font-weight="900" font-size="74" fill="#E0245F" letter-spacing="-1">FRESH</text>
+        <!-- BREEDING & CONCEPTS -->
+        <text x="305" y="130" font-family="'Arial', sans-serif" font-weight="700" font-size="20" fill="#888" letter-spacing="0.5">BREEDING &amp; CONCEPTS</text>
+        <!-- FORWARD -->
+        <text x="80" y="215" font-family="'Arial Black', Impact, sans-serif" font-weight="900" font-size="74" fill="#7CC242" letter-spacing="-1">FORWARD</text>
+      </svg>
+      <h1 data-i18n="welcome.title">Welkom!</h1>
+      <p class="subtitle" data-i18n="welcome.subtitle">Registreer u hieronder voor uw bezoek</p>
+      <button class="btn-primary btn-large" onclick="goto('details')" data-i18n="welcome.start">Start registratie</button>
+    </div>
+  </div>
+
+  <!-- Screen 2: Bezoeker details -->
+  <div class="screen" id="screen-details">
+    <div class="card">
+      <div class="stepper">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+      <h2 data-i18n="details.title">Uw gegevens</h2>
+      <label data-i18n="details.name">Volledige naam *</label>
+      <input type="text" id="visitorName" autocomplete="off" autocapitalize="words" data-i18n-placeholder="details.namePh" placeholder="Voornaam Achternaam">
+
+      <label data-i18n="details.company">Bedrijf / organisatie</label>
+      <input type="text" id="visitorCompany" autocomplete="off" autocapitalize="words">
+
+      <div class="row">
+        <div>
+          <label data-i18n="details.phone">Telefoonnummer *</label>
+          <input type="tel" id="visitorPhone" autocomplete="off" data-i18n-placeholder="details.phonePh" placeholder="+31 6 12345678">
+        </div>
+        <div>
+          <label data-i18n="details.email">E-mailadres</label>
+          <input type="email" id="visitorEmail" autocomplete="off" data-i18n-placeholder="details.emailPh" placeholder="naam@bedrijf.nl">
+        </div>
+      </div>
+
+      <div class="error-msg" id="errorDetails" style="display:none"></div>
+
+      <div class="actions">
+        <button class="btn-secondary" onclick="goto('welcome')" data-i18n="back">Terug</button>
+        <button class="btn-primary" onclick="validateDetails()" data-i18n="next">Volgende</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: Bezoek aan + kenteken -->
+  <div class="screen" id="screen-visit">
+    <div class="card">
+      <div class="stepper">
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+      <h2 data-i18n="visit.title">Uw bezoek</h2>
+
+      <label data-i18n="visit.location">Locatie *</label>
+      <select id="visitorLocation"></select>
+      <div class="field-hint" data-i18n="visit.locationHint">Welke vestiging bezoekt u?</div>
+
+      <label data-i18n="visit.host">Op bezoek bij *</label>
+      <input type="text" id="visitorHost" autocomplete="off" autocapitalize="words" list="employeeList" data-i18n-placeholder="visit.hostPh" placeholder="Voornaam Achternaam">
+      <datalist id="employeeList"></datalist>
+      <div class="field-hint" data-i18n="visit.hostHint">Voornaam én achternaam van de medewerker</div>
+
+      <label data-i18n="visit.reason">Reden van bezoek</label>
+      <input type="text" id="visitorReason" autocomplete="off">
+
+      <label data-i18n="visit.license">Kenteken (indien met auto)</label>
+      <input type="text" id="visitorLicense" autocomplete="off" autocapitalize="characters" style="text-transform: uppercase;">
+      <div class="field-hint" data-i18n="visit.licenseHint">Optioneel — voor parkeerregistratie</div>
+
+      <div class="error-msg" id="errorVisit" style="display:none"></div>
+
+      <div class="actions">
+        <button class="btn-secondary" onclick="goto('details')" data-i18n="back">Terug</button>
+        <button class="btn-primary" onclick="validateVisit()" data-i18n="next">Volgende</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 4: Policy + akkoord -->
+  <div class="screen" id="screen-policy">
+    <div class="card">
+      <div class="stepper">
+        <div class="step-dot done"></div>
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+      </div>
+      <h2 data-i18n="policy.title">Bezoekersbeleid</h2>
+      <p data-i18n="policy.intro">Lees onderstaand beleid zorgvuldig door:</p>
+      <div class="policy-box" id="policyText"></div>
+
+      <label class="checkbox-row" for="acceptCheck">
+        <input type="checkbox" id="acceptCheck">
+        <span data-i18n="policy.accept">Ik heb het bezoekersbeleid gelezen en ga hiermee akkoord.</span>
+      </label>
+
+      <div class="error-msg" id="errorPolicy" style="display:none"></div>
+
+      <div class="actions">
+        <button class="btn-secondary" onclick="goto('visit')" data-i18n="back">Terug</button>
+        <button class="btn-primary" onclick="validatePolicy()" data-i18n="next">Volgende</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: Handtekening -->
+  <div class="screen" id="screen-sign">
+    <div class="card">
+      <div class="stepper">
+        <div class="step-dot done"></div>
+        <div class="step-dot done"></div>
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+      </div>
+      <h2 data-i18n="sign.title">Handtekening</h2>
+      <p data-i18n="sign.intro">Plaats hieronder uw handtekening ter bevestiging:</p>
+
+      <div class="signature-box">
+        <canvas id="sigCanvas"></canvas>
+      </div>
+
+      <div class="signature-actions">
+        <button class="btn-secondary" onclick="clearSig()" data-i18n="sign.clear">Wissen</button>
+      </div>
+
+      <div class="error-msg" id="errorSign" style="display:none"></div>
+
+      <div class="actions">
+        <button class="btn-secondary" onclick="goto('policy')" data-i18n="back">Terug</button>
+        <button class="btn-primary" onclick="submitForm()" id="submitBtn" data-i18n="sign.submit">Registratie afronden</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 6: Bevestiging -->
+  <div class="screen" id="screen-done">
+    <div class="card success-card">
+      <div class="icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </div>
+      <h1 data-i18n="done.title">Bedankt!</h1>
+      <p class="subtitle" data-i18n="done.subtitle">Uw registratie is opgeslagen.</p>
+      <p style="font-size: 18px; color: #4b5563; margin: -16px 0 0;"><strong id="hostNotify"></strong></p>
+      <p style="margin-top: 32px; color: #6b7280; font-size: 15px;">
+        <span data-i18n="done.timer">Dit scherm sluit automatisch over</span>
+        <strong id="countdown" style="color: #1a1a1a;">30</strong> s
+      </p>
+      <button class="btn-primary btn-large" onclick="resetForm()" data-i18n="done.new">Nieuwe registratie</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Settings modal -->
+<div class="settings-modal" id="settingsModal">
+  <div class="settings-content">
+    <h2>Instellingen — Airtable koppeling</h2>
+    <p style="color: #6b7280;">Voer hieronder je Airtable gegevens in. Deze worden lokaal op deze iPad opgeslagen.</p>
+
+    <label>Personal Access Token (PAT)</label>
+    <input type="text" id="cfgToken" placeholder="patXXXXXXXXXXXXXX">
+    <div class="field-hint">Aanmaken op airtable.com → Builder Hub → Personal access tokens. Scope: data.records:write</div>
+
+    <label>Base ID</label>
+    <input type="text" id="cfgBase" placeholder="appXXXXXXXXXXXXXX">
+    <div class="field-hint">Te vinden in de URL van je Airtable base, of via airtable.com/api</div>
+
+    <label>Tabelnaam</label>
+    <input type="text" id="cfgTable" placeholder="Bezoekers">
+    <div class="field-hint">Standaard: "Bezoekers"</div>
+
+    <label>Bedrijfsnaam (optioneel — wordt op welkomstscherm getoond)</label>
+    <input type="text" id="cfgCompany" placeholder="Mijn Bedrijf">
+
+    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+    <h3>Locaties / vestigingen</h3>
+    <p style="color: #6b7280; font-size: 14px;">Eén locatie per regel. Deze worden getoond als dropdown bij de bezoekersregistratie.</p>
+    <textarea id="cfgLocations" rows="6" placeholder="Hoofdkantoor De Lier&#10;Kassen Maasdijk&#10;R&D Lab Naaldwijk&#10;Productielocatie Bleiswijk" style="width:100%; padding:12px; font-size:14px; line-height:1.6; border:2px solid #e5e7eb; border-radius:8px; font-family:inherit; resize:vertical;"></textarea>
+
+    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+    <h3>Bezoekersbeleid per taal</h3>
+    <p style="color: #6b7280; font-size: 14px;">Pas de tekst aan voor elke taal. Lege regel = nieuwe alinea. Regels die beginnen met • of - worden bullet points.</p>
+    <div class="policy-tabs">
+      <button class="policy-tab active" data-tab="nl" onclick="switchPolicyTab('nl')">🇳🇱 Nederlands</button>
+      <button class="policy-tab" data-tab="en" onclick="switchPolicyTab('en')">🇬🇧 English</button>
+      <button class="policy-tab" data-tab="de" onclick="switchPolicyTab('de')">🇩🇪 Deutsch</button>
+      <button class="policy-tab" data-tab="es" onclick="switchPolicyTab('es')">🇪🇸 Español</button>
+    </div>
+    <textarea id="cfgPolicyNl" rows="14" class="policy-textarea" style="width:100%; padding:12px; font-size:14px; line-height:1.6; border:2px solid #e5e7eb; border-radius:8px; font-family:inherit; resize:vertical;"></textarea>
+    <textarea id="cfgPolicyEn" rows="14" class="policy-textarea" style="display:none; width:100%; padding:12px; font-size:14px; line-height:1.6; border:2px solid #e5e7eb; border-radius:8px; font-family:inherit; resize:vertical;"></textarea>
+    <textarea id="cfgPolicyDe" rows="14" class="policy-textarea" style="display:none; width:100%; padding:12px; font-size:14px; line-height:1.6; border:2px solid #e5e7eb; border-radius:8px; font-family:inherit; resize:vertical;"></textarea>
+    <textarea id="cfgPolicyEs" rows="14" class="policy-textarea" style="display:none; width:100%; padding:12px; font-size:14px; line-height:1.6; border:2px solid #e5e7eb; border-radius:8px; font-family:inherit; resize:vertical;"></textarea>
+    <button class="btn-secondary" style="margin-top:8px;" onclick="loadDefaultPolicy()">Standaardtekst laden voor zichtbare taal</button>
+
+    <div class="actions">
+      <button class="btn-secondary" onclick="closeSettings()">Annuleren</button>
+      <button class="btn-primary" onclick="saveSettings()">Opslaan</button>
+    </div>
+
+    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+    <h3>Wachtrij</h3>
+    <p id="queueInfo" style="color: #6b7280;">Geen registraties in wachtrij.</p>
+    <button class="btn-secondary" onclick="retryQueue()" id="retryBtn" style="display:none">Wachtrij opnieuw verzenden</button>
+
+    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;">
+    <h3>Vereiste velden in Airtable</h3>
+    <p style="color: #6b7280; font-size: 14px;">Zorg dat je tabel deze velden (kolommen) bevat (hoofdlettergevoelig):</p>
+    <pre style="background: #f3f4f6; padding: 12px; border-radius: 8px; font-size: 13px; overflow-x: auto;">Naam (Single line text)
+Bedrijf (Single line text)
+Telefoon (Phone number)
+Email (Email)
+Bezoek aan (Single line text)
+Reden (Single line text)
+Kenteken (Single line text)
+Tijdstip (Date — incl. tijd)
+Policy akkoord (Checkbox)
+Handtekening (Long text)
+Taal (Single line text)</pre>
+  </div>
+</div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  CONFIG — kies één van deze drie modi:                              ║
+// ║                                                                      ║
+// ║  1) PROXY MODE (aanbevolen voor publieke deploy):                   ║
+// ║     Plak je Cloudflare Worker URL in `workerUrl`. PAT staat veilig  ║
+// ║     op de server-side, NIET in deze repo. Zie cloudflare-worker.js. ║
+// ║                                                                      ║
+// ║  2) DIRECT MODE (alleen voor private/lokale iPad-kiosk):            ║
+// ║     Plak een write-only Airtable PAT in `token`.                    ║
+// ║                                                                      ║
+// ║  3) KIOSK MODE (token & workerUrl leeg):                            ║
+// ║     Settings via 5x tap rechtsboven, PAT in localStorage.           ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+const CONFIG = {
+  workerUrl: "https://freshforward-visitors.peterjan-vaningen.workers.dev",
+  token: "",                              // LEEG laten — PAT staat in Cloudflare Worker
+  base: "appXsofo09R8Qax8q",              // Je Bezoekersregistratie base ID
+  table: "Bezoekers",
+  locations: [
+    "Fresh Forward Huissen",
+    "Fresh Forward Stevensbeek",
+    "Fresh Forward España",
+    "Fresh Forward Randwijk"
+  ],
+  // Medewerker-lijst staat NIET hier (AVG: niet in publieke repo).
+  // Wordt opgehaald via GET ${workerUrl}/employees bij paginalad.
+  employees: []
+};
+const USE_WORKER = !!(CONFIG.workerUrl && CONFIG.workerUrl.length > 10);
+const IS_DEPLOYED = USE_WORKER || !!(CONFIG.token && CONFIG.token.length > 10);
+
+// ============= i18n =============
+const i18n = {
+  nl: {
+    "welcome.title": "Welkom!",
+    "welcome.subtitle": "Registreer u hieronder voor uw bezoek",
+    "welcome.start": "Start registratie",
+    "details.title": "Uw gegevens",
+    "details.name": "Volledige naam *",
+    "details.namePh": "Voornaam Achternaam",
+    "details.company": "Bedrijf / organisatie",
+    "details.phone": "Telefoonnummer *",
+    "details.phonePh": "+31 6 12345678",
+    "details.email": "E-mailadres",
+    "details.emailPh": "naam@bedrijf.nl",
+    "visit.title": "Uw bezoek",
+    "visit.location": "Locatie *",
+    "visit.locationHint": "Welke vestiging bezoekt u?",
+    "visit.locationPlaceholder": "— Selecteer locatie —",
+    "visit.host": "Op bezoek bij *",
+    "visit.hostPh": "Voornaam Achternaam",
+    "visit.hostHint": "Voornaam én achternaam van de medewerker",
+    "visit.reason": "Reden van bezoek",
+    "visit.license": "Kenteken (indien met auto)",
+    "visit.licenseHint": "Optioneel — voor parkeerregistratie",
+    "policy.title": "Bezoekersbeleid",
+    "policy.intro": "Lees onderstaand beleid zorgvuldig door:",
+    "policy.accept": "Ik heb het bezoekersbeleid gelezen en ga hiermee akkoord.",
+    "sign.title": "Handtekening",
+    "sign.intro": "Plaats hieronder uw handtekening ter bevestiging:",
+    "sign.clear": "Wissen",
+    "sign.submit": "Registratie afronden",
+    "done.title": "Bedankt!",
+    "done.subtitle": "Uw registratie is opgeslagen.",
+    "done.timer": "Dit scherm sluit automatisch over",
+    "done.new": "Nieuwe registratie",
+    "back": "Terug",
+    "next": "Volgende"
+  },
+  en: {
+    "welcome.title": "Welcome!",
+    "welcome.subtitle": "Please register below for your visit",
+    "welcome.start": "Start registration",
+    "details.title": "Your details",
+    "details.name": "Full name *",
+    "details.namePh": "First name Last name",
+    "details.company": "Company / organisation",
+    "details.phone": "Phone number *",
+    "details.phonePh": "+44 20 1234 5678",
+    "details.email": "Email address",
+    "details.emailPh": "name@company.com",
+    "visit.title": "Your visit",
+    "visit.location": "Location *",
+    "visit.locationHint": "Which site are you visiting?",
+    "visit.locationPlaceholder": "— Select location —",
+    "visit.host": "Visiting *",
+    "visit.hostPh": "First name Last name",
+    "visit.hostHint": "First and last name of the employee",
+    "visit.reason": "Reason for visit",
+    "visit.license": "License plate (if by car)",
+    "visit.licenseHint": "Optional — for parking registration",
+    "policy.title": "Visitor policy",
+    "policy.intro": "Please read the policy below carefully:",
+    "policy.accept": "I have read and agree to the visitor policy.",
+    "sign.title": "Signature",
+    "sign.intro": "Please sign below to confirm:",
+    "sign.clear": "Clear",
+    "sign.submit": "Complete registration",
+    "done.title": "Thank you!",
+    "done.subtitle": "Your registration has been saved.",
+    "done.timer": "This screen will close automatically in",
+    "done.new": "New registration",
+    "back": "Back",
+    "next": "Next"
+  },
+  de: {
+    "welcome.title": "Willkommen!",
+    "welcome.subtitle": "Bitte registrieren Sie sich für Ihren Besuch",
+    "welcome.start": "Registrierung starten",
+    "details.title": "Ihre Daten",
+    "details.name": "Vollständiger Name *",
+    "details.namePh": "Vorname Nachname",
+    "details.company": "Firma / Organisation",
+    "details.phone": "Telefonnummer *",
+    "details.phonePh": "+49 30 12345678",
+    "details.email": "E-Mail-Adresse",
+    "details.emailPh": "name@firma.de",
+    "visit.title": "Ihr Besuch",
+    "visit.location": "Standort *",
+    "visit.locationHint": "Welchen Standort besuchen Sie?",
+    "visit.locationPlaceholder": "— Standort wählen —",
+    "visit.host": "Besuch bei *",
+    "visit.hostPh": "Vorname Nachname",
+    "visit.hostHint": "Vor- und Nachname des Mitarbeiters",
+    "visit.reason": "Grund des Besuchs",
+    "visit.license": "Kennzeichen (falls mit Auto)",
+    "visit.licenseHint": "Optional — für Parkregistrierung",
+    "policy.title": "Besucherrichtlinie",
+    "policy.intro": "Bitte lesen Sie die folgende Richtlinie sorgfältig durch:",
+    "policy.accept": "Ich habe die Besucherrichtlinie gelesen und stimme ihr zu.",
+    "sign.title": "Unterschrift",
+    "sign.intro": "Bitte unterschreiben Sie zur Bestätigung:",
+    "sign.clear": "Löschen",
+    "sign.submit": "Registrierung abschließen",
+    "done.title": "Vielen Dank!",
+    "done.subtitle": "Ihre Registrierung wurde gespeichert.",
+    "done.timer": "Dieses Fenster schließt automatisch in",
+    "done.new": "Neue Registrierung",
+    "back": "Zurück",
+    "next": "Weiter"
+  },
+  es: {
+    "welcome.title": "¡Bienvenido!",
+    "welcome.subtitle": "Por favor regístrese para su visita",
+    "welcome.start": "Iniciar registro",
+    "details.title": "Sus datos",
+    "details.name": "Nombre completo *",
+    "details.namePh": "Nombre Apellido",
+    "details.company": "Empresa / organización",
+    "details.phone": "Número de teléfono *",
+    "details.phonePh": "+34 612 345 678",
+    "details.email": "Correo electrónico",
+    "details.emailPh": "nombre@empresa.es",
+    "visit.title": "Su visita",
+    "visit.location": "Ubicación *",
+    "visit.locationHint": "¿Qué ubicación visita?",
+    "visit.locationPlaceholder": "— Seleccionar ubicación —",
+    "visit.host": "Visita a *",
+    "visit.hostPh": "Nombre Apellido",
+    "visit.hostHint": "Nombre y apellido del empleado",
+    "visit.reason": "Motivo de la visita",
+    "visit.license": "Matrícula (si viene en coche)",
+    "visit.licenseHint": "Opcional — para registro de aparcamiento",
+    "policy.title": "Política de visitantes",
+    "policy.intro": "Lea atentamente la siguiente política:",
+    "policy.accept": "He leído y acepto la política de visitantes.",
+    "sign.title": "Firma",
+    "sign.intro": "Firme abajo para confirmar:",
+    "sign.clear": "Borrar",
+    "sign.submit": "Completar registro",
+    "done.title": "¡Gracias!",
+    "done.subtitle": "Su registro ha sido guardado.",
+    "done.timer": "Esta pantalla se cerrará automáticamente en",
+    "done.new": "Nuevo registro",
+    "back": "Atrás",
+    "next": "Siguiente"
+  }
+};
+const LANG_CYCLE = { nl: 'en', en: 'de', de: 'es', es: 'nl' };
+const LANG_LABEL = { nl: 'NL', en: 'EN', de: 'DE', es: 'ES' };
+const LANG_PHONE_PREFIX = { nl: '+31 ', en: '+44 ', de: '+49 ', es: '+34 ' };
+let currentLang = localStorage.getItem('vf_lang') || 'nl';
+
+function applyLang() {
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const text = i18n[currentLang][key];
+    if (!text) return;
+    // SAFE: never wipe out child elements with IDs (e.g. hostNotify, countdown).
+    if (el.children.length === 0) {
+      el.textContent = text;
+    } else {
+      // Replace only the first non-empty text node, keep child elements intact.
+      const firstText = Array.from(el.childNodes).find(n => n.nodeType === Node.TEXT_NODE && n.nodeValue.trim().length > 0);
+      if (firstText) firstText.nodeValue = text + ' ';
+    }
+  });
+  // Translate placeholders too
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const text = i18n[currentLang][key];
+    if (text) el.placeholder = text;
+  });
+  // Highlight active flag button
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.lang === currentLang);
+  });
+  renderPolicy();
+  populateLocations();
+  prefillPhone();
+}
+function setLang(lang) {
+  if (!i18n[lang]) return;
+  currentLang = lang;
+  localStorage.setItem('vf_lang', currentLang);
+  applyLang();
+}
+
+// ============= Navigation =============
+function goto(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  if (name === 'sign') setTimeout(initCanvas, 50);
+}
+
+// ============= State =============
+let formData = {};
+let countdownTimer = null;
+
+const ERR_MSG = {
+  noName: { nl: 'Vul uw naam in.', en: 'Please enter your name.', de: 'Bitte geben Sie Ihren Namen ein.', es: 'Por favor ingrese su nombre.' },
+  fullName: { nl: 'Vul uw voornaam én achternaam in.', en: 'Please enter both first and last name.', de: 'Bitte geben Sie Vor- und Nachname ein.', es: 'Por favor ingrese nombre y apellido.' },
+  noPhone: { nl: 'Vul uw telefoonnummer in.', en: 'Please enter your phone number.', de: 'Bitte geben Sie Ihre Telefonnummer ein.', es: 'Por favor ingrese su número de teléfono.' },
+  badPhone: { nl: 'Telefoon moet beginnen met landcode, bv. +31 6 12345678.', en: 'Phone must start with country code, e.g. +31 6 12345678.', de: 'Telefon muss mit Landesvorwahl beginnen, z.B. +49 30 1234567.', es: 'El teléfono debe comenzar con código de país, ej. +34 612 345 678.' },
+  badEmail: { nl: 'Ongeldig e-mailadres.', en: 'Invalid email address.', de: 'Ungültige E-Mail-Adresse.', es: 'Correo electrónico no válido.' },
+  noLocation: { nl: 'Selecteer een locatie.', en: 'Please select a location.', de: 'Bitte wählen Sie einen Standort.', es: 'Por favor seleccione una ubicación.' },
+  noHost: { nl: 'Vul in bij wie u op bezoek bent.', en: 'Please enter who you are visiting.', de: 'Bitte geben Sie an, wen Sie besuchen.', es: 'Por favor indique a quién visita.' },
+  fullHost: { nl: 'Vul voornaam én achternaam van uw gastheer/-vrouw in.', en: 'Please enter both first and last name of your host.', de: 'Bitte Vor- und Nachname Ihres Gastgebers eingeben.', es: 'Por favor ingrese nombre y apellido de su anfitrión.' },
+  noAccept: { nl: 'Akkoord met het beleid is vereist.', en: 'You must accept the policy.', de: 'Die Zustimmung zur Richtlinie ist erforderlich.', es: 'Debe aceptar la política.' },
+  noSign: { nl: 'Plaats uw handtekening.', en: 'Please provide your signature.', de: 'Bitte unterschreiben Sie.', es: 'Por favor firme.' },
+  submitting: { nl: 'Verzenden...', en: 'Submitting...', de: 'Senden...', es: 'Enviando...' }
+};
+
+// Validation helpers
+function hasFirstAndLast(s) {
+  // True if string has at least 2 words (each >=2 chars), allowing hyphens, apostrophes, accents.
+  const parts = s.trim().split(/\s+/).filter(p => p.length >= 2);
+  return parts.length >= 2;
+}
+function isValidPhone(s) {
+  // Accept both international "+31..." and "0031..." formats
+  const cleaned = s.replace(/[\s\-\(\)]/g, '');
+  return /^(\+|00)\d{8,15}$/.test(cleaned);
+}
+function prefillPhone() {
+  const input = document.getElementById('visitorPhone');
+  if (!input) return;
+  const current = input.value.trim();
+  const prefix = LANG_PHONE_PREFIX[currentLang] || '';
+  // Only overwrite if field is empty OR contains just a country-code prefix
+  if (!current || /^(\+\d{1,3}|00\d{1,3})\s*$/.test(current)) {
+    input.value = prefix;
+  }
+}
+function isValidEmail(s) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);
+}
+
+function validateDetails() {
+  const name = document.getElementById('visitorName').value.trim();
+  const phone = document.getElementById('visitorPhone').value.trim();
+  const email = document.getElementById('visitorEmail').value.trim();
+  const err = document.getElementById('errorDetails');
+  if (!name) { err.textContent = ERR_MSG.noName[currentLang]; err.style.display = 'block'; return; }
+  if (!hasFirstAndLast(name)) { err.textContent = ERR_MSG.fullName[currentLang]; err.style.display = 'block'; return; }
+  if (!phone) { err.textContent = ERR_MSG.noPhone[currentLang]; err.style.display = 'block'; return; }
+  if (!isValidPhone(phone)) { err.textContent = ERR_MSG.badPhone[currentLang]; err.style.display = 'block'; return; }
+  if (email && !isValidEmail(email)) { err.textContent = ERR_MSG.badEmail[currentLang]; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  formData.name = name;
+  formData.company = document.getElementById('visitorCompany').value.trim();
+  formData.phone = phone;
+  formData.email = email;
+  goto('visit');
+}
+
+function validateVisit() {
+  const location = document.getElementById('visitorLocation').value;
+  const host = document.getElementById('visitorHost').value.trim();
+  const err = document.getElementById('errorVisit');
+  const locs = getLocations();
+  if (locs.length > 0 && !location) { err.textContent = ERR_MSG.noLocation[currentLang]; err.style.display = 'block'; return; }
+  if (!host) { err.textContent = ERR_MSG.noHost[currentLang]; err.style.display = 'block'; return; }
+  if (!hasFirstAndLast(host)) { err.textContent = ERR_MSG.fullHost[currentLang]; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  formData.location = location;
+  formData.host = host;
+  formData.reason = document.getElementById('visitorReason').value.trim();
+  formData.license = document.getElementById('visitorLicense').value.trim().toUpperCase();
+  goto('policy');
+}
+
+// Note: checkbox toggle is now handled natively by <label for="acceptCheck">
+
+function validatePolicy() {
+  const cb = document.getElementById('acceptCheck');
+  const err = document.getElementById('errorPolicy');
+  if (!cb.checked) { err.textContent = ERR_MSG.noAccept[currentLang]; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  formData.accepted = true;
+  goto('sign');
+}
+
+// ============= Signature canvas =============
+let canvas, ctx, drawing = false, hasInk = false;
+function initCanvas() {
+  canvas = document.getElementById('sigCanvas');
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = rect.height * 2;
+  ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  hasInk = false;
+
+  const getPos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - r.left, y: t.clientY - r.top };
+  };
+
+  const start = (e) => { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+  const move = (e) => { if (!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); hasInk = true; };
+  const end = (e) => { drawing = false; };
+
+  canvas.ontouchstart = start; canvas.ontouchmove = move; canvas.ontouchend = end;
+  canvas.onmousedown = start; canvas.onmousemove = move; canvas.onmouseup = end; canvas.onmouseleave = end;
+}
+function clearSig() {
+  if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  hasInk = false;
+}
+
+// ============= Compress signature =============
+function compressSignature() {
+  // Resize and convert to JPEG to keep payload small
+  const maxW = 600, maxH = 200;
+  const sw = canvas.width, sh = canvas.height;
+  const ratio = Math.min(maxW / sw, maxH / sh, 1);
+  const tw = Math.round(sw * ratio), th = Math.round(sh * ratio);
+  const tmp = document.createElement('canvas');
+  tmp.width = tw; tmp.height = th;
+  const tctx = tmp.getContext('2d');
+  tctx.fillStyle = '#ffffff';
+  tctx.fillRect(0, 0, tw, th);
+  tctx.drawImage(canvas, 0, 0, tw, th);
+  return tmp.toDataURL('image/jpeg', 0.75);
+}
+
+// ============= Submit =============
+function submitForm() {
+  const err = document.getElementById('errorSign');
+  if (!hasInk) { err.textContent = ERR_MSG.noSign[currentLang]; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = ERR_MSG.submitting[currentLang];
+  setStatus(ERR_MSG.submitting[currentLang], '');
+
+  // Switch to done screen IMMEDIATELY, even before signature compression.
+  // This guarantees the user never sees a hang regardless of what happens after.
+  document.getElementById('hostNotify').textContent = formData.host;
+  goto('done');
+  startCountdown();
+
+  // Capture data and signature on next tick so the screen has time to paint
+  setTimeout(() => {
+    try {
+      formData.signature = compressSignature();
+    } catch (e) {
+      console.error('Signature compression failed:', e);
+      formData.signature = '';
+    }
+    formData.timestamp = new Date().toISOString();
+    formData.lang = currentLang;
+
+    // Reset button for next visitor
+    btn.disabled = false;
+    btn.textContent = i18n[currentLang]['sign.submit'];
+
+    // Send in background (with timeout so it never hangs forever)
+    const dataCopy = JSON.parse(JSON.stringify(formData));
+    sendToAirtable(dataCopy).then(ok => {
+      if (!ok) queueRecord(dataCopy);
+    }).catch(e => {
+      console.error('Submit failed:', e);
+      queueRecord(dataCopy);
+    });
+  }, 50);
+}
+
+// ============= Airtable integration =============
+function getConfig() {
+  if (IS_DEPLOYED) {
+    return { token: CONFIG.token, base: CONFIG.base, table: CONFIG.table || 'Bezoekers' };
+  }
+  return {
+    token: localStorage.getItem('vf_token') || '',
+    base: localStorage.getItem('vf_base') || '',
+    table: localStorage.getItem('vf_table') || 'Bezoekers'
+  };
+}
+
+async function sendToAirtable(data) {
+  const cfg = getConfig();
+  const usingWorker = USE_WORKER;
+  if (!usingWorker && (!cfg.token || !cfg.base)) {
+    setStatus('Geen Airtable configuratie — opgeslagen in wachtrij', 'warning');
+    return false;
+  }
+  try {
+    const fields = {
+      "Naam": data.name,
+      "Bedrijf": data.company || '',
+      "Telefoon": data.phone,
+      "Email": data.email || '',
+      "Locatie": data.location || '',
+      "Bezoek aan": data.host,
+      "Reden": data.reason || '',
+      "Kenteken": data.license || '',
+      "Tijdstip": data.timestamp,
+      "Policy akkoord": !!data.accepted,
+      "Handtekening": data.signature,
+      "Taal": data.lang || 'nl'
+    };
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+    const endpoint = usingWorker
+      ? CONFIG.workerUrl
+      : `https://api.airtable.com/v0/${cfg.base}/${encodeURIComponent(cfg.table)}`;
+    const headers = { 'Content-Type': 'application/json' };
+    if (!usingWorker) headers['Authorization'] = 'Bearer ' + cfg.token;
+    // Lookup explicit host email from employee list (if exact match)
+    const hostEmail = lookupHostEmail(data.host);
+    const payload = hostEmail ? { fields, hostEmail } : { fields };
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!resp.ok) {
+      const txt = await resp.text();
+      console.error('Airtable error:', resp.status, txt);
+      setStatus('Verzendfout (' + resp.status + ') — in wachtrij', 'error');
+      return false;
+    }
+    setStatus('Verzonden ✓', '');
+    return true;
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      console.error('Airtable request timed out');
+      setStatus('Timeout — in wachtrij', 'error');
+    } else {
+      console.error(e);
+      setStatus('Netwerkfout — in wachtrij', 'error');
+    }
+    return false;
+  }
+}
+
+function queueRecord(data) {
+  const q = JSON.parse(localStorage.getItem('vf_queue') || '[]');
+  q.push(data);
+  localStorage.setItem('vf_queue', JSON.stringify(q));
+  updatePendingBadge();
+}
+
+async function retryQueue() {
+  const q = JSON.parse(localStorage.getItem('vf_queue') || '[]');
+  if (q.length === 0) return;
+  setStatus('Wachtrij verzenden (' + q.length + ')...', '');
+  const remaining = [];
+  for (const rec of q) {
+    const ok = await sendToAirtable(rec);
+    if (!ok) remaining.push(rec);
+  }
+  localStorage.setItem('vf_queue', JSON.stringify(remaining));
+  updatePendingBadge();
+  if (remaining.length === 0) setStatus('Wachtrij geleegd ✓', '');
+  else setStatus(remaining.length + ' nog in wachtrij', 'warning');
+  closeSettings();
+}
+
+function updatePendingBadge() {
+  const q = JSON.parse(localStorage.getItem('vf_queue') || '[]');
+  const badge = document.getElementById('pendingBadge');
+  if (q.length > 0) {
+    badge.classList.add('show');
+    badge.textContent = q.length + ' in wachtrij';
+  } else {
+    badge.classList.remove('show');
+  }
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('statusPill');
+  el.textContent = msg;
+  el.className = 'status-pill' + (type ? ' ' + type : '');
+  if (!type) setTimeout(() => { el.textContent = 'Klaar'; el.className = 'status-pill'; }, 4000);
+}
+
+// Auto-retry queue every 60s when online
+setInterval(() => {
+  if (navigator.onLine) {
+    const q = JSON.parse(localStorage.getItem('vf_queue') || '[]');
+    if (q.length > 0) retryQueue();
+  }
+}, 60000);
+
+// ============= Countdown / reset =============
+function startCountdown() {
+  let s = 30;
+  document.getElementById('countdown').textContent = s;
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    s--;
+    document.getElementById('countdown').textContent = s;
+    if (s <= 0) { clearInterval(countdownTimer); resetForm(); }
+  }, 1000);
+}
+
+function resetForm() {
+  clearInterval(countdownTimer);
+  formData = {};
+  ['visitorName','visitorCompany','visitorPhone','visitorEmail','visitorHost','visitorReason','visitorLicense'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('visitorLocation').value = '';
+  document.getElementById('acceptCheck').checked = false;
+  clearSig();
+  prefillPhone(); // restore the language-specific prefix for next visitor
+  goto('welcome');
+}
+
+// ============= Settings (hidden gesture) =============
+// In deploy mode (CONFIG.token set) we DO NOT expose settings — visitors must not access PAT/config.
+let tapCount = 0, tapTimer = null;
+document.getElementById('settingsIcon').addEventListener('click', () => {
+  if (IS_DEPLOYED) return; // settings locked in deploy mode
+  tapCount++;
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(() => tapCount = 0, 1500);
+  if (tapCount >= 5) {
+    tapCount = 0;
+    openSettings();
+  }
+});
+
+let activePolicyTab = 'nl';
+const POLICY_TAB_IDS = { nl: 'cfgPolicyNl', en: 'cfgPolicyEn', de: 'cfgPolicyDe', es: 'cfgPolicyEs' };
+function switchPolicyTab(lang) {
+  activePolicyTab = lang;
+  document.querySelectorAll('.policy-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === lang));
+  Object.entries(POLICY_TAB_IDS).forEach(([l, id]) => {
+    document.getElementById(id).style.display = l === lang ? 'block' : 'none';
+  });
+}
+function getLocations() {
+  if (IS_DEPLOYED && CONFIG.locations && CONFIG.locations.length > 0) {
+    return CONFIG.locations.filter(Boolean);
+  }
+  const raw = localStorage.getItem('vf_locations') || '';
+  return raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+}
+function populateLocations() {
+  const sel = document.getElementById('visitorLocation');
+  const locs = getLocations();
+  const placeholder = i18n[currentLang]['visit.locationPlaceholder'] || '— Selecteer locatie —';
+  const current = sel.value;
+  sel.innerHTML = '<option value="">' + placeholder + '</option>'
+    + locs.map(l => '<option value="' + l.replace(/"/g, '&quot;') + '">' + l.replace(/</g,'&lt;') + '</option>').join('');
+  if (current && locs.includes(current)) sel.value = current;
+}
+// In-memory employee cache, gevuld door fetchEmployeesFromWorker() bij init.
+let _employeeCache = [];
+
+function getEmployees() {
+  if (_employeeCache.length > 0) return _employeeCache;
+  // Fallback voor lokale kiosk-modus: gebruik CONFIG.employees als die ingevuld is
+  if (IS_DEPLOYED && CONFIG.employees && CONFIG.employees.length > 0) return CONFIG.employees;
+  return [];
+}
+
+async function fetchEmployeesFromWorker() {
+  if (!USE_WORKER || !CONFIG.workerUrl) return;
+  try {
+    const url = CONFIG.workerUrl.replace(/\/$/, '') + '/employees';
+    const resp = await fetch(url, { method: 'GET' });
+    if (!resp.ok) {
+      console.warn('Employees fetch failed', resp.status);
+      return;
+    }
+    const list = await resp.json();
+    if (Array.isArray(list) && list.length > 0) {
+      _employeeCache = list;
+      populateEmployees();
+    }
+  } catch (e) {
+    console.warn('Employees fetch error', e);
+    // Niet-fatale fout — visitor mag alsnog vrij typen
+  }
+}
+
+function populateEmployees() {
+  const dl = document.getElementById('employeeList');
+  if (!dl) return;
+  const list = getEmployees();
+  dl.innerHTML = list.map(e =>
+    `<option value="${(e.name || '').replace(/"/g, '&quot;')}"></option>`
+  ).join('');
+}
+
+function lookupHostEmail(hostName) {
+  if (!hostName) return null;
+  const list = getEmployees();
+  if (!list.length) return null;
+  const target = hostName.trim().toLowerCase();
+  const match = list.find(e => (e.name || '').trim().toLowerCase() === target);
+  return match ? (match.email || null) : null;
+}
+function openSettings() {
+  const cfg = getConfig();
+  document.getElementById('cfgToken').value = cfg.token;
+  document.getElementById('cfgBase').value = cfg.base;
+  document.getElementById('cfgTable').value = cfg.table;
+  document.getElementById('cfgCompany').value = localStorage.getItem('vf_company') || '';
+  document.getElementById('cfgLocations').value = localStorage.getItem('vf_locations') || '';
+  document.getElementById('cfgPolicyNl').value = localStorage.getItem('vf_policy_nl') || localStorage.getItem('vf_policy') || DEFAULT_POLICY.nl;
+  document.getElementById('cfgPolicyEn').value = localStorage.getItem('vf_policy_en') || DEFAULT_POLICY.en;
+  document.getElementById('cfgPolicyDe').value = localStorage.getItem('vf_policy_de') || DEFAULT_POLICY.de;
+  document.getElementById('cfgPolicyEs').value = localStorage.getItem('vf_policy_es') || DEFAULT_POLICY.es;
+  switchPolicyTab(currentLang in DEFAULT_POLICY ? currentLang : 'nl');
+  const q = JSON.parse(localStorage.getItem('vf_queue') || '[]');
+  document.getElementById('queueInfo').textContent = q.length === 0 ? 'Geen registraties in wachtrij.' : q.length + ' registratie(s) in wachtrij.';
+  document.getElementById('retryBtn').style.display = q.length > 0 ? 'block' : 'none';
+  document.getElementById('settingsModal').classList.add('active');
+}
+function closeSettings() { document.getElementById('settingsModal').classList.remove('active'); }
+function saveSettings() {
+  localStorage.setItem('vf_token', document.getElementById('cfgToken').value.trim());
+  localStorage.setItem('vf_base', document.getElementById('cfgBase').value.trim());
+  localStorage.setItem('vf_table', document.getElementById('cfgTable').value.trim() || 'Bezoekers');
+  localStorage.setItem('vf_company', document.getElementById('cfgCompany').value.trim());
+  localStorage.setItem('vf_locations', document.getElementById('cfgLocations').value);
+  localStorage.setItem('vf_policy_nl', document.getElementById('cfgPolicyNl').value);
+  localStorage.setItem('vf_policy_en', document.getElementById('cfgPolicyEn').value);
+  localStorage.setItem('vf_policy_de', document.getElementById('cfgPolicyDe').value);
+  localStorage.setItem('vf_policy_es', document.getElementById('cfgPolicyEs').value);
+  populateLocations();
+  renderPolicy();
+  closeSettings();
+  setStatus('Instellingen opgeslagen ✓', '');
+}
+function loadDefaultPolicy() {
+  const id = POLICY_TAB_IDS[activePolicyTab];
+  document.getElementById(id).value = DEFAULT_POLICY[activePolicyTab];
+}
+
+// ============= Policy rendering =============
+const DEFAULT_POLICY = {
+  nl: `Toegangsbeleid Bezoekers
+
+Doel en reikwijdte
+Dit beleid bevat maatregelen om het intellectueel eigendom en het veredelingsmateriaal te beschermen van Fresh Forward Holding B.V. en haar dochterondernemingen, inclusief toegewezen testlocaties (hierna: Fresh Forward).
+
+Dit beleid is van toepassing op alle bezoekers van terreinen, velden, kassen, kwekerijen, boomgaarden of onderzoeksfaciliteiten die direct of indirect door Fresh Forward worden geëxploiteerd, beheerd of gebruikt.
+
+Definities
+Selecties: Aardbeienplanten of appelbomen die worden geëvalueerd voor mogelijke commerciële introductie.
+Geavanceerde selecties: Aardbeienplanten of appelbomen in late ontwikkelingsfase, dicht bij commercialisatie.
+Beide categorieën gelden als vertrouwelijk veredelingsmateriaal.
+
+Bezoekersregistratie
+Alle bezoekers worden waar mogelijk vooraf geregistreerd. Bij spontane bezoeken zorgt de medewerker dat de bezoeker voldoet aan alle vereisten van dit beleid voordat toegang wordt verleend. Registratie omvat: volledige naam en contactgegevens, organisatie en bedrijfsnaam, doel van het bezoek, en gewenste toegangsgebieden.
+
+Goedkeuringsproces
+• De supervisor is verantwoordelijk voor het goedkeuren of weigeren van bezoeken.
+• Bezoeken kunnen worden geweigerd indien de bezoeker verbonden is aan een concurrent of een belangenconflict heeft, of indien het bezoek conflicteert met lopende veredelingsactiviteiten, beschikbaarheid van personeel of het bedrijfsbeleid.
+
+Begeleiding door personeel
+• Bezoekers worden te allen tijde begeleid door een geautoriseerde medewerker.
+• Onbegeleide toegang tot enig veredelingsgebied is strikt verboden en kan leiden tot vervolging wegens bedrijfsspionage.
+
+Vertrouwelijkheid en beperkingen
+• Foto- en video-opnames zijn uitsluitend toegestaan na voorafgaande goedkeuring.
+• Het is bezoekers verboden plantmateriaal mee te nemen of te verzamelen, waaronder bladeren, stengels, takken, planten, bomen, wortels, bloemen of pollen, vruchten of zaden.
+• Selecties en geavanceerde selecties zijn vertrouwelijk en mogen niet worden gedeeld.
+
+Gedrag
+• Bezoekers volgen alle instructies van het personeel op.
+• Overtreding van dit beleid kan leiden tot onmiddellijke beëindiging van het bezoek en weigering van toekomstige toegang.
+
+Handhaving
+Niet-naleving van dit beleid kan juridische stappen of andere maatregelen tot gevolg hebben om het intellectueel eigendom van Fresh Forward te beschermen.
+
+Verwerking persoonsgegevens (AVG)
+Uw geregistreerde gegevens (naam, contactgegevens, kenteken, tijdstip en handtekening) worden uitsluitend gebruikt voor toegangsregistratie, veiligheid en calamiteiten. Grondslag: gerechtvaardigd belang (bescherming intellectueel eigendom en veredelingsmateriaal) en wettelijke verplichtingen rond bedrijfshulpverlening. De gegevens worden bewaard voor maximaal 90 dagen en daarna automatisch verwijderd. U heeft recht op inzage, correctie, verwijdering of beperking — neem hiervoor contact op met uw gastheer/-vrouw of mail naar IT@fresh-forward.nl.
+
+Verklaring van de bezoeker
+• Toegang en begeleiding: Ik begrijp dat toegang tot Fresh Forward uitsluitend onder begeleiding van personeel is toegestaan en ik betreed geen beperkte gebieden zonder toestemming.
+• Vertrouwelijkheid: Ik begrijp dat alle selecties en geavanceerde selecties vertrouwelijk veredelingsmateriaal zijn en ik zal hierover geen informatie delen.
+• Foto's en opnames: Foto's of opnames zijn uitsluitend toegestaan na voorafgaande goedkeuring van Fresh Forward.
+• Plantmateriaal: Ik zal geen plantmateriaal meenemen of verzamelen, waaronder bladeren, stengels, takken, planten, bomen, wortels, bloemen, pollen, vruchten of zaden.
+• Gedrag en naleving: Ik volg alle instructies van het personeel op en begrijp dat niet-naleving kan leiden tot onmiddellijke beëindiging van het bezoek.
+
+Door dit beleid te accepteren bevestigt u dat u bovenstaande gelezen heeft en akkoord gaat.`,
+  en: `Access Policy Visitors
+
+Purpose and scope
+This policy establishes measures to protect the intellectual property and breeding material of Fresh Forward Holding B.V. and its subsidiary companies, including assigned testing locations (hereinafter: Fresh Forward).
+
+This policy applies to all visitors entering any premises, fields, greenhouses, nurseries, orchards or research facilities operated, managed or used directly or indirectly by Fresh Forward.
+
+Definitions
+Selections: Strawberry plants or apple trees under evaluation for potential commercial release.
+Advanced Selections: Strawberry plants or apple trees in late-stage development, close to commercialization.
+Both categories are considered confidential breeding material.
+
+Visitor Registration
+All visitors must be registered in advance whenever possible. When upfront registration is not possible (e.g., spontaneous visits), staff is responsible for ensuring visitors comply with all requirements of this policy before granting access. Registration must include: full name and contact details, affiliation and company name, purpose of visit, and areas requested for access.
+
+Approval Process
+• The Supervisor is responsible for approving or denying visit requests.
+• Visits may be denied if the visitor is affiliated with a competitor or has a conflict of interest, or if the visit conflicts with ongoing breeding activities, availability of staff or company policy.
+
+Staff Escort
+• Visitors must be accompanied by an authorized staff member at all times.
+• Unsupervised access to any breeding area is strictly prohibited and may result in prosecution for company espionage.
+
+Confidentiality & Restrictions
+• Photography and video recording are allowed only upon prior approval.
+• Visitors are not allowed to take or collect any plant material, including leaves, stems, branches, plants, trees, roots, flowers, pollen, fruits or seeds.
+• Selections and advanced selections are confidential and must not be disclosed.
+
+Conduct
+• Visitors must comply with all instructions provided by staff.
+• Any violation of this policy may result in immediate termination of the visit and denial of future access.
+
+Enforcement
+Failure to adhere to this policy may lead to legal action or other measures to protect Fresh Forward's intellectual property.
+
+Personal data processing (GDPR)
+Your registered data (name, contact details, license plate, time and signature) will be used exclusively for access registration, safety and emergency management. Legal basis: legitimate interest (protection of intellectual property and breeding material) and statutory obligations regarding workplace emergency response. Data is retained for a maximum of 90 days and then automatically deleted. You have the right to access, correct, erase or restrict your data — please contact your host or email IT@fresh-forward.nl.
+
+Visitor Declaration
+• Access & Supervision: I understand that access to Fresh Forward premises is permitted only under staff supervision and I will not enter restricted areas without authorization.
+• Confidentiality: I understand that all selections and advanced selections are confidential breeding material and I will not disclose any related information.
+• Photography & Recording: Photography or filming is only allowed with prior approval from Fresh Forward staff.
+• Plant Material Restrictions: I will not take or collect any plant material including leaves, stems, branches, plants, trees, roots, flowers, pollen, fruits, or seeds.
+• Behaviour & Compliance: I will follow all staff instructions and understand that non-compliance may result in immediate termination of the visit.
+
+By accepting this policy you confirm that you have read the above and agree to it.`,
+  de: `Zugangsrichtlinie für Besucher
+
+Zweck und Geltungsbereich
+Diese Richtlinie legt Maßnahmen zum Schutz des geistigen Eigentums und des Züchtungsmaterials von Fresh Forward Holding B.V. und ihren Tochtergesellschaften, einschließlich der zugewiesenen Versuchsstandorte (im Folgenden: Fresh Forward), fest.
+
+Diese Richtlinie gilt für alle Besucher, die das Gelände, Felder, Gewächshäuser, Baumschulen, Obstplantagen oder Forschungseinrichtungen betreten, die direkt oder indirekt von Fresh Forward betrieben, verwaltet oder genutzt werden.
+
+Definitionen
+Selektionen: Erdbeerpflanzen oder Apfelbäume, die für eine mögliche kommerzielle Markteinführung evaluiert werden.
+Fortgeschrittene Selektionen: Erdbeerpflanzen oder Apfelbäume in einer späten Entwicklungsphase, kurz vor der Kommerzialisierung.
+Beide Kategorien gelten als vertrauliches Züchtungsmaterial.
+
+Besucherregistrierung
+Alle Besucher müssen nach Möglichkeit im Voraus registriert werden. Ist eine Vorab-Registrierung nicht möglich (z. B. bei spontanen Besuchen), ist das Personal dafür verantwortlich sicherzustellen, dass die Besucher allen Anforderungen dieser Richtlinie entsprechen, bevor Zutritt gewährt wird. Die Registrierung muss umfassen: vollständiger Name und Kontaktdaten, Zugehörigkeit und Firmenname, Zweck des Besuchs, und die angeforderten Zugangsbereiche.
+
+Genehmigungsverfahren
+• Der Vorgesetzte ist für die Genehmigung oder Ablehnung von Besuchsanfragen verantwortlich.
+• Besuche können abgelehnt werden, wenn der Besucher mit einem Wettbewerber verbunden ist oder einen Interessenkonflikt hat, oder wenn der Besuch im Konflikt mit laufenden Züchtungsaktivitäten, der Verfügbarkeit des Personals oder der Unternehmenspolitik steht.
+
+Begleitung durch Personal
+• Besucher müssen während ihres Besuchs jederzeit von einem autorisierten Mitarbeiter begleitet werden.
+• Unbeaufsichtigter Zugang zu einem Züchtungsbereich ist strikt untersagt und kann zur Strafverfolgung wegen Betriebsspionage führen.
+
+Vertraulichkeit und Einschränkungen
+• Foto- und Videoaufnahmen sind nur mit vorheriger Genehmigung gestattet.
+• Besucher dürfen kein Pflanzmaterial mitnehmen oder sammeln, einschließlich Blätter, Stängel, Zweige, Pflanzen, Bäume, Wurzeln, Blüten oder Pollen, Früchte oder Samen.
+• Selektionen und fortgeschrittene Selektionen gelten als vertraulich und dürfen nicht offengelegt werden.
+
+Verhalten
+• Besucher müssen allen Anweisungen des Personals Folge leisten.
+• Jeder Verstoß gegen diese Richtlinie kann zum sofortigen Abbruch des Besuchs und zur Verweigerung künftigen Zutritts führen.
+
+Durchsetzung
+Die Nichteinhaltung dieser Richtlinie kann rechtliche Schritte oder andere Maßnahmen zum Schutz des geistigen Eigentums von Fresh Forward nach sich ziehen.
+
+Verarbeitung personenbezogener Daten (DSGVO)
+Ihre registrierten Daten (Name, Kontaktdaten, Kennzeichen, Zeitpunkt und Unterschrift) werden ausschließlich für Zutrittsregistrierung, Sicherheit und Notfallmanagement verwendet. Rechtsgrundlage: berechtigtes Interesse (Schutz des geistigen Eigentums und des Züchtungsmaterials) sowie gesetzliche Verpflichtungen zur betrieblichen Notfallorganisation. Die Daten werden maximal 90 Tage aufbewahrt und anschließend automatisch gelöscht. Sie haben das Recht auf Auskunft, Berichtigung, Löschung oder Einschränkung — wenden Sie sich an Ihren Gastgeber/Ihre Gastgeberin oder schreiben Sie an IT@fresh-forward.nl.
+
+Besuchererklärung
+• Zutritt und Begleitung: Ich verstehe, dass der Zutritt zu Fresh Forward nur unter Aufsicht des Personals gestattet ist, und ich werde keine eingeschränkten Bereiche ohne Genehmigung betreten.
+• Vertraulichkeit: Ich verstehe, dass alle Selektionen und fortgeschrittenen Selektionen vertrauliches Züchtungsmaterial sind, und ich werde keine diesbezüglichen Informationen preisgeben.
+• Foto und Aufnahmen: Foto- oder Filmaufnahmen sind nur mit vorheriger Genehmigung des Personals von Fresh Forward gestattet.
+• Beschränkungen für Pflanzmaterial: Ich werde kein Pflanzmaterial mitnehmen oder sammeln, einschließlich Blätter, Stängel, Zweige, Pflanzen, Bäume, Wurzeln, Blüten, Pollen, Früchte oder Samen.
+• Verhalten und Einhaltung: Ich werde alle Anweisungen des Personals befolgen und verstehe, dass Nichteinhaltung zum sofortigen Abbruch des Besuchs führen kann.
+
+Mit der Akzeptanz dieser Richtlinie bestätigen Sie, dass Sie das Vorstehende gelesen haben und damit einverstanden sind.`,
+  es: `Política de acceso para visitantes
+
+Objeto y ámbito de aplicación
+Esta política establece medidas para proteger la propiedad intelectual y el material de mejora genética de Fresh Forward Holding B.V. y sus filiales, incluidas las ubicaciones de prueba asignadas (en lo sucesivo: Fresh Forward).
+
+Esta política se aplica a todos los visitantes que ingresen a cualquier instalación, campo, invernadero, vivero, huerto o centro de investigación operado, gestionado o utilizado directa o indirectamente por Fresh Forward.
+
+Definiciones
+Selecciones: Plantas de fresa o manzanos en evaluación para su posible lanzamiento comercial.
+Selecciones avanzadas: Plantas de fresa o manzanos en fase avanzada de desarrollo, próximas a la comercialización.
+Ambas categorías se consideran material de mejora genética confidencial.
+
+Registro de visitantes
+Todos los visitantes deben registrarse con antelación siempre que sea posible. Cuando el registro previo no sea posible (p. ej., visitas espontáneas), el personal es responsable de asegurar que los visitantes cumplan con todos los requisitos de esta política antes de conceder el acceso. El registro debe incluir: nombre completo y datos de contacto, afiliación y nombre de la empresa, propósito de la visita, y áreas para las que se solicita acceso.
+
+Proceso de aprobación
+• El supervisor es responsable de aprobar o denegar las solicitudes de visita.
+• Las visitas pueden ser denegadas si el visitante está afiliado a un competidor o tiene un conflicto de intereses, o si la visita entra en conflicto con actividades de mejora genética en curso, la disponibilidad del personal o la política de la empresa.
+
+Acompañamiento por el personal
+• Los visitantes deben estar acompañados por un miembro autorizado del personal en todo momento durante su visita.
+• El acceso sin supervisión a cualquier área de mejora genética está estrictamente prohibido y puede dar lugar a acciones judiciales por espionaje empresarial.
+
+Confidencialidad y restricciones
+• La fotografía y la grabación de vídeo solo están permitidas con autorización previa.
+• Los visitantes no pueden tomar ni recolectar ningún material vegetal, incluidos hojas, tallos, ramas, plantas, árboles, raíces, flores o polen, frutos o semillas.
+• Las selecciones y selecciones avanzadas son confidenciales y no deben ser divulgadas.
+
+Conducta
+• Los visitantes deben cumplir con todas las instrucciones proporcionadas por el personal.
+• Cualquier violación de esta política puede dar lugar a la terminación inmediata de la visita y a la denegación de futuros accesos.
+
+Aplicación
+El incumplimiento de esta política puede dar lugar a acciones legales u otras medidas para proteger la propiedad intelectual de Fresh Forward.
+
+Tratamiento de datos personales (RGPD)
+Sus datos registrados (nombre, datos de contacto, matrícula, hora y firma) se utilizan exclusivamente para registro de acceso, seguridad y gestión de emergencias. Base jurídica: interés legítimo (protección de la propiedad intelectual y del material de mejora genética) y obligaciones legales relativas a la organización de emergencias laborales. Los datos se conservan durante un máximo de 90 días y luego se eliminan automáticamente. Tiene derecho de acceso, rectificación, supresión o limitación — póngase en contacto con su anfitrión/anfitriona o escriba a IT@fresh-forward.nl.
+
+Declaración del visitante
+• Acceso y supervisión: Entiendo que el acceso a las instalaciones de Fresh Forward solo está permitido bajo la supervisión del personal y no entraré en áreas restringidas sin autorización.
+• Confidencialidad: Entiendo que todas las selecciones y selecciones avanzadas son material de mejora genética confidencial y no divulgaré información relacionada.
+• Fotografía y grabación: La fotografía o filmación solo está permitida con la autorización previa del personal de Fresh Forward.
+• Restricciones de material vegetal: No tomaré ni recolectaré ningún material vegetal, incluidos hojas, tallos, ramas, plantas, árboles, raíces, flores, polen, frutos o semillas.
+• Conducta y cumplimiento: Seguiré todas las instrucciones del personal y entiendo que el incumplimiento puede dar lugar a la terminación inmediata de la visita.
+
+Al aceptar esta política, usted confirma haber leído lo anterior y estar de acuerdo.`
+};
+
+function escapeHtmlText(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function renderPolicy() {
+  const key = 'vf_policy_' + currentLang;
+  // Backwards compat: old single key 'vf_policy' maps to NL
+  const txt = localStorage.getItem(key)
+    || (currentLang === 'nl' ? localStorage.getItem('vf_policy') : null)
+    || DEFAULT_POLICY[currentLang]
+    || DEFAULT_POLICY.nl;
+  const box = document.getElementById('policyText');
+  // Split on blank lines into paragraphs/lists
+  const blocks = txt.split(/\n\s*\n/);
+  const html = blocks.map(block => {
+    const lines = block.split(/\n/).map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return '';
+    // Bullet list if any line starts with • or -
+    if (lines.every(l => /^[•\-]\s/.test(l))) {
+      return '<ul>' + lines.map(l => '<li>' + escapeHtmlText(l.replace(/^[•\-]\s+/, '')) + '</li>').join('') + '</ul>';
+    }
+    // Mix: split heading (first short line) + bullets
+    const bulletIdx = lines.findIndex(l => /^[•\-]\s/.test(l));
+    if (bulletIdx > 0) {
+      const head = lines.slice(0, bulletIdx).join(' ');
+      const bullets = lines.slice(bulletIdx);
+      const isHeading = lines[0].length < 60 && bulletIdx === 1;
+      return (isHeading ? '<p><strong>' + escapeHtmlText(head) + '</strong></p>' : '<p>' + escapeHtmlText(head) + '</p>')
+        + '<ul>' + bullets.map(l => '<li>' + escapeHtmlText(l.replace(/^[•\-]\s+/, '')) + '</li>').join('') + '</ul>';
+    }
+    // Heading-style: short first line + body
+    if (lines.length > 1 && lines[0].length < 60) {
+      return '<p><strong>' + escapeHtmlText(lines[0]) + '</strong><br>' + escapeHtmlText(lines.slice(1).join(' ')) + '</p>';
+    }
+    return '<p>' + escapeHtmlText(lines.join(' ')) + '</p>';
+  }).join('');
+  box.innerHTML = html;
+}
+
+// ============= Init =============
+applyLang();
+renderPolicy();
+populateLocations();
+populateEmployees();
+fetchEmployeesFromWorker(); // async — vult lijst zodra Worker antwoordt
+updatePendingBadge();
+
+// Prevent accidental swipe-back / overscroll on iPad — but only outside scrollable areas.
+// In deploy mode (visitor phones) skip entirely so normal scrolling works.
+if (!IS_DEPLOYED) {
+  document.addEventListener('touchmove', (e) => {
+    if (e.target.closest('.screen, .policy-box, .settings-content, input, textarea, select')) return;
+    e.preventDefault();
+  }, { passive: false });
+}
+
+// Auto-open settings if not configured (kiosk mode only)
+if (!IS_DEPLOYED && !getConfig().token) {
+  setTimeout(() => {
+    setStatus('Niet geconfigureerd — tap rechtsboven 5x voor instellingen', 'warning');
+  }, 500);
+}
+// Hide the status pill entirely in deploy mode (visitors don't need to see "Klaar")
+if (IS_DEPLOYED) {
+  const sp = document.getElementById('statusPill');
+  if (sp) sp.style.display = 'none';
+}
+</script>
+</body>
+</html>
